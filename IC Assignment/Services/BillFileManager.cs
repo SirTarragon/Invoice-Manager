@@ -73,6 +73,8 @@ namespace IC_Assignment.Services
             StringBuilder report = new StringBuilder(
                 $"1~FR|2~{Key2}|3~Sample UT file|4~{todayString}|5~{Bills.Count}|6~{totalBillAmount}\n");
 
+            var serviceAddress = new StringBuilder();
+
             foreach (var bill in Bills)
             {
                 DateTime notificationTwo = bill.DueDt.AddDays(-3);
@@ -81,7 +83,14 @@ namespace IC_Assignment.Services
                 string billDt = bill.BillDt.ToString("MM/dd/yyyy");
                 string dueDt = bill.DueDt.ToString("MM/dd/yyyy");
 
-                string serviceAddress = string.Empty;
+                // wouldn't want to be creating a new StringBuilder every loop
+                // but concatenating or Clear() wouldn't be much better
+                serviceAddress.Append(bill.AddressInfo.MailingAddress1).Append(", ");
+                if (!string.IsNullOrEmpty(bill.AddressInfo.MailingAddress2))
+                    serviceAddress.Append(bill.AddressInfo.MailingAddress2).Append(", ");
+                serviceAddress.Append(bill.AddressInfo.City).Append(", ")
+                    .Append(bill.AddressInfo.State).Append(", ")
+                    .Append(bill.AddressInfo.Zip);
 
                 // unknown input size, append better than concatenate due to GC memory
                 // still doesn't make this appealing to look at though
@@ -93,7 +102,7 @@ namespace IC_Assignment.Services
                     .Append($"|EE~{bill.AddressInfo.City}")
                     .Append($"|FF~{bill.AddressInfo.State}")
                     .Append($"|GG~{bill.AddressInfo.Zip}\n")
-                    .Append($"HH~IH|II~R") // bills
+                    .Append($"HH~IH|II~R") // bill invoice
                     .Append($"|JJ~{JJ}")
                     .Append($"|KK~{bill.InvoiceNo}")
                     .Append($"|LL~{billDt}")
@@ -103,7 +112,9 @@ namespace IC_Assignment.Services
                     .Append($"|PP~{notifTwoString}")
                     .Append($"|QQ~{bill.Bill.BalanceDue}")
                     .Append($"|RR~{todayString}")
-                    .Append($"|SS~{serviceAddress}\n");
+                    .Append($"|SS~{serviceAddress.ToString()}\n");
+
+                serviceAddress.Clear();
             }
 
             // now need to write to the RPT file
