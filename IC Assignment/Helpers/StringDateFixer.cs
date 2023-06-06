@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace IC_Assignment.Helpers
+﻿namespace IC_Assignment.Helpers
 {
     // why does the string have to be potentially weird?
     // why does it have to be Jann when there's also Jan?

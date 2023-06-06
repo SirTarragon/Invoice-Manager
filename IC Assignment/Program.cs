@@ -1,17 +1,16 @@
 ﻿using IC_Assignment.Services;
-using System;
+using System.Runtime.Versioning;
 
+[SupportedOSPlatform("windows")]
 internal class Program
 {
-    private static string connectionString = @"C:\Billing.mdb";
-
     private static BillFileManager fileManager;
     private static DatabaseManager dbManager;
 
     private static void Main(string[] args)
     {
         fileManager = new BillFileManager();
-        dbManager = new DatabaseManager(connectionString);
+        dbManager = new DatabaseManager();
 
         while (true)
         {
@@ -61,13 +60,13 @@ internal class Program
                 break;
             }
 
-            if (File.Exists(input) && Path.GetExtension(input).Equals(".xml", StringComparison.OrdinalIgnoreCase))
+            if (File.Exists(input) && Path.GetExtension(input).Equals(".xml"))
             {
-                Console.WriteLine($"Processing XML file: {input}");
+                Console.WriteLine($"Processing XML file... Please wait...");
 
-                if (fileManager.Load(input))
+                if (fileManager.ImportXMLData(input))
                 {
-                    SaveRPT();
+                    SaveRPT(); // call local function to handle input for RPT file location
                     break;
                 }
             }
@@ -82,15 +81,17 @@ internal class Program
     {
         while (true)
         {
-            Console.WriteLine("Enter the path for the RPT file, otherwise press 'Enter' for default:");
+            Console.WriteLine("Enter the path for the RPT file:");
             string input = Console.ReadLine();
 
             if(Directory.Exists(input))
             {
                 Console.WriteLine("Saving...");
 
-                if(fileManager.Save(input))
+                if(fileManager.ExportToRPT(input))
                 {
+                    fileManager.ClearBills(); // shouldn't be needing to save the data
+                            // again if successfully saved
                     break;
                 }
             }
@@ -103,11 +104,50 @@ internal class Program
 
     private static void LoadRPTFile()
     {
-        
+        while (true)
+        {
+            Console.WriteLine("Enter the path for the RPT file, otherwise type 'Back' to return to menu:");
+            string input = Console.ReadLine();
+
+            if (input.ToLower() == "back")
+            {
+                break;
+            }
+
+            if (File.Exists(input) && Path.GetExtension(input).Equals(".rpt"))
+            {
+                Console.WriteLine($"Processing RPT file... Please wait...");
+
+                if (dbManager.UpdateFromRPT(input)) break;
+            }
+            else
+            {
+                Console.WriteLine("Invalid filename or file format. Please try again.");
+            }
+        }
     }
 
     private static void ExportDBtoCSV()
     {
+        while (true)
+        {
+            Console.WriteLine("Enter the path for the BillingReport file, otherwise type 'Back' to return to menu:");
+            string input = Console.ReadLine();
 
+            if (input.ToLower() == "back")
+            {
+                break;
+            }
+
+            if (Directory.Exists(input))
+            {
+                Console.WriteLine("Exporting...");
+
+                if(dbManager.ExportAsCSV(input))
+                {
+                    break;
+                }
+            }
+        }
     }
 }

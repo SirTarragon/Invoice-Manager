@@ -7,7 +7,9 @@ namespace IC_Assignment.Models
     public class BillHeader
     {
         [XmlElement(ElementName = "Invoice_No")]
-        public string InvoiceNo { get; set; }
+        public string InvoiceNo { get; set; }   // most of the billfile.xml case could be numbers
+                                                // but one of them is effectively a string, don't know if it's
+                                                // supposed to actually be an unaccepted case
         [XmlElement(ElementName = "Account_No")]
         public string AccountNo { get; set; }
         [XmlElement(ElementName = "Customer_Name")]
