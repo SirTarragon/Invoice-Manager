@@ -5,6 +5,7 @@
  * */
 
 using IC_Assignment.Models;
+using System.Configuration;
 using System.Data.OleDb;
 using System.Runtime.Versioning;
 using System.Text;
@@ -45,22 +46,30 @@ namespace IC_Assignment.Services
     [SupportedOSPlatform("windows")] // cuts down on warnings, mainly due to OleDb
     public class DatabaseManager
     {
-        private const string defProvider = "Microsoft.ACE.OLEDB.12.0";
-        private const string defDBLoc = @"D:\Personal Projects\IC Assignment\!Provided Files\Billing.mdb";
         private string connectionString;
         private int BillIDCounter, CustomerIDCounter;
         private BillRptSerializer rptSerializer;
+        public bool Online { get; private set; }
 
-        // default string needs to be changed depending on expected default location
-        public DatabaseManager(string connectionString = 
-            $@"Provider={defProvider};Data Source=""{defDBLoc}"";")
+        public DatabaseManager(string connectionString)
         {
             rptSerializer = new BillRptSerializer();
-            if(LoadConnection(connectionString))
+            if (LoadConnection(connectionString))
             {
+                this.connectionString = connectionString;
+                this.Online = true;
                 Console.WriteLine("No issue with database connection.");
             }
+            else
+            {
+                Console.WriteLine("Please fix the connectionString.");
+                Console.WriteLine("If the connectionString is set to default, find " +
+                    "the App.config file and change location of the default Data Source.");
+                this.Online = false;
+            }
         }
+
+        public DatabaseManager() : this(ConfigurationManager.ConnectionStrings["Default"].ConnectionString) { }
 
         public bool LoadConnection(string s)
         {
@@ -71,8 +80,6 @@ namespace IC_Assignment.Services
                 using (var connection = new OleDbConnection(s))
                 {
                     connection.Open();
-                    // if it succeeded, then save the string
-                    this.connectionString = s;
 
                     using (var command = connection.CreateCommand())
                     {
@@ -84,7 +91,7 @@ namespace IC_Assignment.Services
                             {
                                 reader.Read();
 
-                                BillIDCounter = reader.IsDBNull(reader.GetOrdinal("MaxBillsID")) ? 1 : 
+                                BillIDCounter = reader.IsDBNull(reader.GetOrdinal("MaxBillsID")) ? 1 :
                                                 reader.GetInt32(reader.GetOrdinal("MaxBillsID")) + 1;
                                 CustomerIDCounter = reader.IsDBNull(reader.GetOrdinal("MaxCustomerID")) ? 1 :
                                                     reader.GetInt32(reader.GetOrdinal("MaxCustomerID")) + 1;
@@ -112,7 +119,7 @@ namespace IC_Assignment.Services
         public bool UpdateFromRPT(string filename)
         {
             if (!filename.Contains(".rpt")) return false;
-            if (BillIDCounter == -1) throw new Exception("Attempt to update failed due to failure to initially connect to database.");
+            if (!Online) throw new Exception("Attempt to update failed due to failure to initially connect to database.");
 
             var listData = new List<BillRptData>();
 
@@ -124,12 +131,12 @@ namespace IC_Assignment.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine (e);
+                Console.WriteLine(e);
                 return false;
             }
 
             // there's probably a better way of doing this
-            foreach(var data in listData)
+            foreach (var data in listData)
             {
                 int customerID = CustomerIDCounter;
                 try
@@ -186,7 +193,7 @@ namespace IC_Assignment.Services
                         // if it isn't meant to be
 
                         InsertBillsTable(customerID, connection, data.FormatGUID, data.InvoiceNumber,
-                            data.BillDt.ToString("MM/dd/yyyy"), data.DueDt.ToString("MM/dd/yyyy"), data.BillAmount, 
+                            data.BillDt.ToString("MM/dd/yyyy"), data.DueDt.ToString("MM/dd/yyyy"), data.BillAmount,
                             data.NotifOne.ToString("MM/dd/yyyy"), data.NotifTwo.ToString("MM/dd/yyyy"),
                             data.BalanceDue, data.DateAdded.ToString("MM/dd/yyyy"), data.ServiceAddress);
 
@@ -203,7 +210,7 @@ namespace IC_Assignment.Services
             return true;
         }
 
-        private void InsertBillsTable(int customerID, OleDbConnection connection, 
+        private void InsertBillsTable(int customerID, OleDbConnection connection,
             string formatGUID, string invoiceNumber, string billDate, string dueDate, string billAmount, string firstNotifDate,
             string secondNotifDate, string balanceDue, string dateAdded, string serviceAddress)
         {
@@ -230,7 +237,7 @@ namespace IC_Assignment.Services
             }
         }
 
-        private void InsertCustomerTable(int customerID, OleDbConnection connection, 
+        private void InsertCustomerTable(int customerID, OleDbConnection connection,
             string checkAccountNumber, string name, string mailAddr1, string mailAddr2, string city, string state, string zip, string dateAdded)
         {
             using (var command = connection.CreateCommand())
@@ -259,7 +266,7 @@ namespace IC_Assignment.Services
 
         public bool ExportAsCSV(string dirName)
         {
-            if (BillIDCounter == -1) throw new Exception("Attempt to export failed due to failure to initially connect to database.");
+            if (!Online) throw new Exception("Attempt to export failed due to failure to initially connect to database.");
 
             // not sure if it just wants to be ordered by Customer ID
             // or if it wants the Bills information done like a coalesce.
@@ -307,7 +314,7 @@ namespace IC_Assignment.Services
                             string path = Path.Combine(dirName, $"BillingReport-{DateTime.Today.ToString("MMddyyyy")}.txt");
 
                             // though we don't want to append to it with more data if it already exists
-                            if(File.Exists(path)) File.Delete(path);
+                            if (File.Exists(path)) File.Delete(path);
 
                             using (var writer = new StreamWriter(path, true))
                             {
@@ -342,7 +349,7 @@ namespace IC_Assignment.Services
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e);
                 return false;

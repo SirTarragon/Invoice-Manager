@@ -1,0 +1,6 @@
+# configuration file for dotnet-releaser
+[msbuild]
+project = "InvoiceManager.sln"
+[github]
+user = "SirTarragon"
+repo = "Invoice-Manager"

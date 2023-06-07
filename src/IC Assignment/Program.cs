@@ -15,36 +15,38 @@ internal class Program
 
     private static void Main(string[] args)
     {
+        bool runtime = true;
+
         // sometimes the application will completely freeze up
         Console.WriteLine("If you still can see this after 10 seconds, restart the application.");
 
         fileManager = new BillFileManager();
         Console.WriteLine("Initialized BillFileManager...");
         dbManager = new DatabaseManager();  // this can hang, possibly due to the thread for opening the connection
-                                        // not sure how to fix beyond telling user to reopen the application
-                                        // doesn't seem to be a repeat issue elsewhere after testing, so not truly sure
-        Console.WriteLine("Initialized DatabaseManager...");
+                                            // not sure how to fix beyond telling user to reopen the application
+                                            // doesn't seem to be a repeat issue elsewhere after testing, so not truly sure
+        if (dbManager.Online) Console.Clear();
+        else runtime = false;
+        // no need to write "Initialized dbManager if it clears right afterwards
 
-        Console.Clear();
-
-        while (true)
+        while (runtime)
         {
             MenuPrompt();
             string input = Console.ReadLine();
 
-            if(input == "1")
+            if (input == "1")
             {
                 Console.Clear();
                 Console.WriteLine("Prompting user to load XML file.");
                 LoadXMLFile();
             }
-            else if(input == "2")
+            else if (input == "2")
             {
                 Console.Clear();
                 Console.WriteLine("Prompting user to load RPT file.");
                 LoadRPTFile();
             }
-            else if(input == "3")
+            else if (input == "3")
             {
                 Console.Clear();
                 Console.WriteLine("Prompting user for export directory.");
@@ -110,14 +112,14 @@ internal class Program
             Console.WriteLine("Enter the path for the RPT file:");
             string input = Console.ReadLine();
 
-            if(Directory.Exists(input))
+            if (Directory.Exists(input))
             {
                 Console.WriteLine("Saving...");
 
-                if(fileManager.ExportToRPT(input))
+                if (fileManager.ExportToRPT(input))
                 {
                     fileManager.ClearBills(); // shouldn't be needing to save the data
-                            // again if successfully saved
+                                              // again if successfully saved
                     break;
                 }
             }
@@ -174,7 +176,7 @@ internal class Program
             {
                 Console.WriteLine("Exporting...");
 
-                if(dbManager.ExportAsCSV(input))
+                if (dbManager.ExportAsCSV(input))
                 {
                     break;
                 }

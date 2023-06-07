@@ -46,7 +46,7 @@ namespace IC_Assignment.Services
 
             try
             {
-                if(!File.Exists(filePath)) // prevent duplicate writing of header line
+                if (!File.Exists(filePath)) // prevent duplicate writing of header line
                 {
                     using (var writer = new StreamWriter(filePath))
                     {
@@ -147,7 +147,7 @@ namespace IC_Assignment.Services
                                                   // don't need to do much with it currently
 
                 // basic initial check for formatting, won't hold up if there are changes elsewhere
-                if (string.IsNullOrEmpty(check) || 
+                if (string.IsNullOrEmpty(check) ||
                     !(check[0] == '1' && check[1] == '~' && check[2] == 'F' && check[3] == 'R'))
                     throw new Exception("File does not meet expected format"); // should be null
 
@@ -188,11 +188,11 @@ namespace IC_Assignment.Services
                         data.BillDt = DateTime.ParseExact(
                             billingInfo[4].Substring(keyLength), "MM/dd/yyyy", null);
                     }
-                    catch 
+                    catch
                     {
                         throw new Exception("Check all LL keys; invalid formatting. Expecting 'MM/dd/yyyy' format.");
                     }
-                    try 
+                    try
                     {
                         data.DueDt = DateTime.ParseExact(
                             billingInfo[5].Substring(keyLength), "MM/dd/yyyy", null);
