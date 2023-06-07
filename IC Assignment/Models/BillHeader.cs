@@ -1,4 +1,10 @@
-﻿using IC_Assignment.Helpers;
+﻿/**
+ * @author: Tyler Pease
+ * @github: https://github.com/SirTarragon
+ * @date: 06/05/2023
+ * */
+
+using IC_Assignment.Helpers;
 using System.Xml.Serialization;
 
 namespace IC_Assignment.Models

@@ -1,4 +1,10 @@
-﻿namespace IC_Assignment.Helpers
+﻿/**
+ * @author: Tyler Pease
+ * @github: https://github.com/SirTarragon
+ * @date: 06/05/2023
+ * */
+
+namespace IC_Assignment.Helpers
 {
     // why does the string have to be potentially weird?
     // why does it have to be Jann when there's also Jan?
@@ -10,7 +16,6 @@
 
             s[0] = s[0].Substring(0, 3);
             s[1] = s[1].Substring(0, 2);
-            s[2] = s[2].Substring(0, 4);
 
             return string.Join("-", s);
         }

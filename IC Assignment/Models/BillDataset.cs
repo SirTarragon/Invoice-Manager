@@ -1,4 +1,10 @@
-﻿using System.Xml.Serialization;
+﻿/**
+ * @author: Tyler Pease
+ * @github: https://github.com/SirTarragon
+ * @date: 06/05/2023
+ * */
+
+using System.Xml.Serialization;
 
 namespace IC_Assignment.Models
 {

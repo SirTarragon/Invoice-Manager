@@ -1,5 +1,13 @@
-﻿using System.Data.OleDb;
+﻿/**
+ * @author: Tyler Pease
+ * @github: https://github.com/SirTarragon
+ * @date: 06/06/2023
+ * */
+
+using IC_Assignment.Models;
+using System.Data.OleDb;
 using System.Runtime.Versioning;
+using System.Text;
 
 namespace IC_Assignment.Services
 {
@@ -34,37 +42,37 @@ namespace IC_Assignment.Services
             );
     */
 
-    [SupportedOSPlatform("windows")]
+    [SupportedOSPlatform("windows")] // cuts down on warnings, mainly due to OleDb
     public class DatabaseManager
     {
+        private const string defProvider = "Microsoft.ACE.OLEDB.12.0";
+        private const string defDBLoc = @"D:\Personal Projects\IC Assignment\!Provided Files\Billing.mdb";
         private string connectionString;
         private int BillIDCounter, CustomerIDCounter;
+        private BillRptSerializer rptSerializer;
 
-        public DatabaseManager()
+        // default string needs to be changed depending on expected default location
+        public DatabaseManager(string connectionString = 
+            $@"Provider={defProvider};Data Source=""{defDBLoc}"";")
         {
-            this.connectionString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source=""D:\Personal Projects\IC Assignment\!Provided Files\Billing.mdb"";";
-            if (LoadConnection(this.connectionString))
-                Console.WriteLine("No issue with connection.");
-        }
-
-        public DatabaseManager(string connectionString)
-        {
+            rptSerializer = new BillRptSerializer();
             if(LoadConnection(connectionString))
             {
-                this.connectionString = connectionString;
-                Console.WriteLine("No issue with connection.");
+                Console.WriteLine("No issue with database connection.");
             }
         }
 
         public bool LoadConnection(string s)
         {
-            Console.WriteLine(s);
             try
             {
-                // had issues with ODBC, a lot better time with OleDB though
+                // most of my time today was trying to figure out issue with ODBC
+                // swapped to OleDb and had no further issues
                 using (var connection = new OleDbConnection(s))
                 {
                     connection.Open();
+                    // if it succeeded, then save the string
+                    this.connectionString = s;
 
                     using (var command = connection.CreateCommand())
                     {
@@ -85,8 +93,8 @@ namespace IC_Assignment.Services
                             }
                             else
                             {
-                                BillIDCounter = 1;
-                                CustomerIDCounter = 1;
+                                BillIDCounter = -1;
+                                CustomerIDCounter = -1;
 
                                 return false;
                             }
@@ -104,109 +112,91 @@ namespace IC_Assignment.Services
         public bool UpdateFromRPT(string filename)
         {
             if (!filename.Contains(".rpt")) return false;
+            if (BillIDCounter == -1) throw new Exception("Attempt to update failed due to failure to initially connect to database.");
 
-            using (StreamReader reader = new StreamReader(filename))
+            var listData = new List<BillRptData>();
+
+            // deserialize the data, mainly to make this function cleaner
+            // and to separate the functionality
+            try
             {
-                string check = reader.ReadLine(); // should be the initial line
-                                                  // don't need to do much with it currently
+                listData = rptSerializer.Deserialize(filename);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine (e);
+                return false;
+            }
 
-                // basic initial check for formatting, won't hold up if there are changes elsewhere
-                if (!(check[0] == '1' && check[1] == '~' && check[2] == 'F' && check[3] == 'R'))
-                    return false;
-
-                // a lot of assumptions that the file hasn't been manually changed out of format
-                string customer, bill;  // contains data from the given line
-                while ((customer = reader.ReadLine()) != null && (bill = reader.ReadLine()) != null)
+            // there's probably a better way of doing this
+            foreach(var data in listData)
+            {
+                int customerID = CustomerIDCounter;
+                try
                 {
-                    // likely doesn't help runtime, but, it's easier to understand
-                    // what's going on by doing this
-                    string[] customerInfo = customer.Split('|');
-                    string[] billingInfo = bill.Split('|');
-
-                    // prevents overreading or hopefully possible inaccurate formatting
-                    if (customerInfo.Length < 8 || billingInfo.Length < 12)
-                        return false;
-
-                    int customerID = CustomerIDCounter;
-                    int checkAccNumCount = 0;
-                    int keyLength = 3;
-
-                    try
+                    // search for active customer information based on account number
+                    using (var connection = new OleDbConnection(connectionString))
                     {
-                        // search for active customer information based on account number
-                        using (var connection = new OleDbConnection(connectionString))
-                        {
-                            // we know where the delimiters are going to be for each string,
-                            // so just better to substring instead of adding array memory overhang
-                            // could easily be done with a .Split("~")[1] though
-                            string checkAccountNumber = customerInfo[1].Substring(keyLength);
-                            connection.Open();
+                        int checkAccNumCount = 0;
+                        connection.Open();
 
-                            // Check if the account number exists in the Customers table
+                        // Check if the account number exists in the Customers table
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.CommandText = "SELECT COUNT(*) FROM Customer WHERE AccountNumber = ?";
+                            _ = command.Parameters.AddWithValue("AccountNumberParam", data.AccountNumber);
+                            checkAccNumCount = Convert.ToInt32(command.ExecuteScalar());
+                        }
+
+                        if (checkAccNumCount > 1)
+                        { // for some reason there's a duplicate accountNumber
+                            throw new Exception($"There's a duplicate Account Number in the database! Inform IT about {data.AccountNumber}!");
+                        }
+                        else if (checkAccNumCount == 1)
+                        { // it exists, get the ID
                             using (var command = connection.CreateCommand())
                             {
-                                command.CommandText = "SELECT COUNT(*) FROM Customer WHERE AccountNumber = ?";
-                                _ = command.Parameters.AddWithValue("AccountNumberParam", checkAccountNumber);
-                                checkAccNumCount = Convert.ToInt32(command.ExecuteScalar());
-                            }
-
-                            // it exists, get the ID
-                            if (checkAccNumCount > 0)
-                            {
-                                using (var command = connection.CreateCommand())
-                                {
-                                    command.CommandText = "SELECT ID FROM Customer WHERE AccountNumber = ?";
-                                    _ = command.Parameters.AddWithValue("AccountNumberParam", checkAccountNumber);
-                                    customerID = Convert.ToInt32(command.ExecuteScalar());
-                                }
-                            }
-                            else
-                            {   // time to insert into the table the new customer information
-                                string name = customerInfo[2].Substring(keyLength);
-                                string mailAddr1 = customerInfo[3].Substring(keyLength);
-                                string mailAddr2 = customerInfo[4].Substring(keyLength);
-                                string city = customerInfo[5].Substring(keyLength);
-                                string state = customerInfo[6].Substring(keyLength);
-                                string zip = customerInfo[7].Substring(keyLength);
-
-                                InsertCustomerTable(customerID, connection, checkAccountNumber, name,
-                                    mailAddr1, mailAddr2, city, state, zip);
+                                command.CommandText = "SELECT ID FROM Customer WHERE AccountNumber = ?";
+                                _ = command.Parameters.AddWithValue("AccountNumberParam", data.AccountNumber);
+                                customerID = Convert.ToInt32(command.ExecuteScalar());
                             }
                         }
-                    }
-                    catch(Exception e) 
-                    {
-                        Console.WriteLine(e);
-                        return false;
-                    }
+                        else
+                        {   // time to insert into the table the new customer information
+                            InsertCustomerTable(customerID, connection, data.AccountNumber, data.CustomerName,
+                                data.MailAddress1, data.MailAddress2, data.City, data.State, data.Zip, data.DateAdded.ToString("MM/dd/yyyy"));
 
-                    try
-                    {
-                        using (var connection = new OleDbConnection(connectionString))
-                        {
-                            connection.Open();
-
-                            string formatGUID = billingInfo[2].Substring(keyLength);
-                            string invoiceNumber = billingInfo[3].Substring(3);
-                            string billDate = billingInfo[4].Substring(keyLength);
-                            string dueDate = billingInfo[5].Substring(keyLength);
-                            string billAmount = billingInfo[6].Substring(keyLength);
-                            string firstNotifDate = billingInfo[7].Substring(keyLength);
-                            string secondNotifDate = billingInfo[8].Substring(keyLength);
-                            string balanceDue = billingInfo[9].Substring(keyLength);
-                            string dateAdded = billingInfo[10].Substring(keyLength);
-                            string serviceAddress = billingInfo[11].Substring(keyLength);
-
-                            InsertBillsTable(customerID, connection, formatGUID, invoiceNumber, 
-                                billDate, dueDate, billAmount, firstNotifDate, secondNotifDate, 
-                                balanceDue, dateAdded, serviceAddress);
+                            Console.WriteLine("Submitted new customer data to database...");
                         }
                     }
-                    catch(Exception e)
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    return false;
+                }
+
+                try
+                {
+                    using (var connection = new OleDbConnection(connectionString))
                     {
-                        Console.WriteLine(e);
-                        return false;
+                        connection.Open();
+
+                        // not sure if duplicate invoice numbers are a thing/allowed, but it should be a simple change
+                        // if it isn't meant to be
+
+                        InsertBillsTable(customerID, connection, data.FormatGUID, data.InvoiceNumber,
+                            data.BillDt.ToString("MM/dd/yyyy"), data.DueDt.ToString("MM/dd/yyyy"), data.BillAmount, 
+                            data.NotifOne.ToString("MM/dd/yyyy"), data.NotifTwo.ToString("MM/dd/yyyy"),
+                            data.BalanceDue, data.DateAdded.ToString("MM/dd/yyyy"), data.ServiceAddress);
+
+                        Console.WriteLine("Submitted new billing data to database...");
                     }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    return false;
                 }
             }
 
@@ -241,7 +231,7 @@ namespace IC_Assignment.Services
         }
 
         private void InsertCustomerTable(int customerID, OleDbConnection connection, 
-            string checkAccountNumber, string name, string mailAddr1, string mailAddr2, string city, string state, string zip)
+            string checkAccountNumber, string name, string mailAddr1, string mailAddr2, string city, string state, string zip, string dateAdded)
         {
             using (var command = connection.CreateCommand())
             {
@@ -259,7 +249,7 @@ namespace IC_Assignment.Services
                 _ = command.Parameters.AddWithValue("CustomerCityParam", city);
                 _ = command.Parameters.AddWithValue("CustomerStateParam", state);
                 _ = command.Parameters.AddWithValue("CustomerZipParam", zip);
-                _ = command.Parameters.AddWithValue("DateAddedParam", DateTime.Today);
+                _ = command.Parameters.AddWithValue("DateAddedParam", dateAdded);
 
                 _ = command.ExecuteNonQuery();
 
@@ -269,6 +259,11 @@ namespace IC_Assignment.Services
 
         public bool ExportAsCSV(string dirName)
         {
+            if (BillIDCounter == -1) throw new Exception("Attempt to export failed due to failure to initially connect to database.");
+
+            // not sure if it just wants to be ordered by Customer ID
+            // or if it wants the Bills information done like a coalesce.
+            // tried it as a coalesce but it's not an available functionality with this db
             string query = @"
             SELECT 
                 Customer.ID,
@@ -291,28 +286,56 @@ namespace IC_Assignment.Services
             LEFT JOIN 
                 Bills ON Customer.ID = Bills.CustomerID";
 
-            string customerID, customerName, accountNumber, customerAddress, customerCity, customerState, customerZip, dateAdded;
-            string billsID, billDate, billNumber, accountBalance, dueDate, billAmount, formatGUID;
+            string header = "Customer.ID,Customer.CustomerName,Customer.AccountNumber,Customer.CustomerAddress,Customer.CustomerCity," +
+                "Customer.CustomerState,Customer.CustomerZip,Bills.ID,Bills.BillDate,Bills.BillNumber,Bills.AccountBalance,Bills.DueDate," +
+                "Bills.BillAmount,Bills.FormatGUID,Customer.DateAdded";
 
             try
             {
                 using (var connection = new OleDbConnection(connectionString))
                 {
-                    using (var command = new OleDbCommand(query, connection))
+                    connection.Open();
+
+                    using (var command = connection.CreateCommand())
                     {
-                        connection.Open();
+                        command.CommandText = query;
 
                         using (var reader = command.ExecuteReader())
                         {
-                            using (StreamWriter writer = new StreamWriter("output.csv"))
+                            // billing report could simply be without the added MMddyyyy, but felt
+                            // like it could do with having that, especially if you potentially want to keep that as another record
+                            string path = Path.Combine(dirName, $"BillingReport-{DateTime.Today.ToString("MMddyyyy")}.txt");
+
+                            // though we don't want to append to it with more data if it already exists
+                            if(File.Exists(path)) File.Delete(path);
+
+                            using (var writer = new StreamWriter(path, true))
                             {
                                 // Write header line
-                                writer.WriteLine("Customer.ID,Customer.CustomerName,Customer.AccountNumber,Customer.CustomerAddress,Customer.CustomerCity,Customer.CustomerState,Customer.CustomerZip,Bills.ID,Bills.BillDate,Bills.BillNumber,Bills.AccountBalance,Bills.DueDate,Bills.BillAmount,Bills.FormatGUID,Customer.DateAdded");
+                                writer.WriteLine(header);
+
+                                var builder = new StringBuilder();
 
                                 // Write data lines
                                 while (reader.Read())
                                 {
-                                    writer.WriteLine($"{reader["ID"]},{reader["CustomerName"]},{reader["AccountNumber"]},{reader["CustomerAddress"]},{reader["CustomerCity"]},{reader["CustomerState"]},{reader["CustomerZip"]},{reader["BillID"]},{reader["BillDate"]},{reader["BillNumber"]},{reader["AccountBalance"]},{reader["DueDate"]},{reader["BillAmount"]},{reader["FormatGUID"]},{reader["DateAdded"]}");
+                                    builder.Append(reader["ID"]).Append(",")
+                                        .Append($@"""{reader["CustomerName"]}""").Append(",")
+                                        .Append($@"""{reader["AccountNumber"]}""").Append(",")
+                                        .Append($@"""{reader["CustomerAddress"]}""").Append(",")
+                                        .Append($@"""{reader["CustomerCity"]}""").Append(",")
+                                        .Append($@"""{reader["CustomerState"]}""").Append(",")
+                                        .Append(reader["CustomerZip"]).Append(",")
+                                        .Append(reader["BillID"]).Append(",")
+                                        .Append($@"""{reader["BillDate"]}""").Append(",")
+                                        .Append($@"""{reader["BillNumber"]}""").Append(",")
+                                        .Append(reader["AccountBalance"]).Append(",")
+                                        .Append($@"""{reader["DueDate"]}""").Append(",")
+                                        .Append(reader["BillAmount"]).Append(",")
+                                        .Append($@"""{reader["FormatGUID"]}""").Append(",")
+                                        .Append($@"""{reader["DateAdded"]}""");
+                                    writer.WriteLine(builder.ToString());
+                                    builder.Clear();
                                 }
                             }
                         }

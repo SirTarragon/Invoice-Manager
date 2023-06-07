@@ -1,7 +1,13 @@
-﻿using IC_Assignment.Services;
+﻿/**
+ * @author: Tyler Pease
+ * @github: https://github.com/SirTarragon
+ * @date: 06/05/2023
+ * */
+
+using IC_Assignment.Services;
 using System.Runtime.Versioning;
 
-[SupportedOSPlatform("windows")]
+[SupportedOSPlatform("windows")] // due to DatabaseManager
 internal class Program
 {
     private static BillFileManager fileManager;
@@ -9,35 +15,44 @@ internal class Program
 
     private static void Main(string[] args)
     {
+        // sometimes the application will completely freeze up
+        Console.WriteLine("If you still can see this after 10 seconds, restart the application.");
+
         fileManager = new BillFileManager();
-        dbManager = new DatabaseManager();
+        Console.WriteLine("Initialized BillFileManager...");
+        dbManager = new DatabaseManager();  // this can hang, possibly due to the thread for opening the connection
+                                        // not sure how to fix beyond telling user to reopen the application
+                                        // doesn't seem to be a repeat issue elsewhere after testing, so not truly sure
+        Console.WriteLine("Initialized DatabaseManager...");
+
+        Console.Clear();
 
         while (true)
         {
-            Console.WriteLine("Look at these commands and select one, please use its associated number:");
-            Console.WriteLine("1: Load BillFile XML");
-            Console.WriteLine("2: Load RPT file to database");
-            Console.WriteLine("3: Export database to CSV file");
-            Console.WriteLine("0: Exit");
+            MenuPrompt();
             string input = Console.ReadLine();
 
             if(input == "1")
             {
+                Console.Clear();
                 Console.WriteLine("Prompting user to load XML file.");
                 LoadXMLFile();
             }
             else if(input == "2")
             {
+                Console.Clear();
                 Console.WriteLine("Prompting user to load RPT file.");
                 LoadRPTFile();
             }
             else if(input == "3")
             {
+                Console.Clear();
                 Console.WriteLine("Prompting user for export directory.");
                 ExportDBtoCSV();
             }
             else if (input == "0")
             {
+                Console.Clear();
                 Console.WriteLine("Exiting the program . . .");
                 break;
             }
@@ -45,6 +60,15 @@ internal class Program
 
         Console.WriteLine("Press any key to exit.");
         Console.ReadKey();
+    }
+
+    private static void MenuPrompt()
+    {
+        Console.WriteLine("Look at these commands and select one, please use its associated number:");
+        Console.WriteLine("1: Load BillFile XML");
+        Console.WriteLine("2: Load RPT file to database");
+        Console.WriteLine("3: Export database to CSV file");
+        Console.WriteLine("0: Exit");
     }
 
     private static void LoadXMLFile()
@@ -57,6 +81,7 @@ internal class Program
 
             if (input.ToLower() == "back")
             {
+                Console.Clear();
                 break;
             }
 
@@ -67,6 +92,7 @@ internal class Program
                 if (fileManager.ImportXMLData(input))
                 {
                     SaveRPT(); // call local function to handle input for RPT file location
+                    // would clear, but want to see any errors
                     break;
                 }
             }
@@ -111,6 +137,7 @@ internal class Program
 
             if (input.ToLower() == "back")
             {
+                Console.Clear();
                 break;
             }
 
@@ -118,7 +145,10 @@ internal class Program
             {
                 Console.WriteLine($"Processing RPT file... Please wait...");
 
-                if (dbManager.UpdateFromRPT(input)) break;
+                if (dbManager.UpdateFromRPT(input))
+                {
+                    break;
+                }
             }
             else
             {
@@ -136,6 +166,7 @@ internal class Program
 
             if (input.ToLower() == "back")
             {
+                Console.Clear();
                 break;
             }
 
