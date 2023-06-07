@@ -269,6 +269,61 @@ namespace IC_Assignment.Services
 
         public bool ExportAsCSV(string dirName)
         {
+            string query = @"
+            SELECT 
+                Customer.ID,
+                Customer.CustomerName,
+                Customer.AccountNumber,
+                Customer.CustomerAddress,
+                Customer.CustomerCity,
+                Customer.CustomerState,
+                Customer.CustomerZip,
+                Bills.ID AS BillID,
+                Bills.BillDate,
+                Bills.BillNumber,
+                Bills.AccountBalance,
+                Bills.DueDate,
+                Bills.BillAmount,
+                Bills.FormatGUID,
+                Customer.DateAdded
+            FROM 
+                Customer
+            LEFT JOIN 
+                Bills ON Customer.ID = Bills.CustomerID";
+
+            string customerID, customerName, accountNumber, customerAddress, customerCity, customerState, customerZip, dateAdded;
+            string billsID, billDate, billNumber, accountBalance, dueDate, billAmount, formatGUID;
+
+            try
+            {
+                using (var connection = new OleDbConnection(connectionString))
+                {
+                    using (var command = new OleDbCommand(query, connection))
+                    {
+                        connection.Open();
+
+                        using (var reader = command.ExecuteReader())
+                        {
+                            using (StreamWriter writer = new StreamWriter("output.csv"))
+                            {
+                                // Write header line
+                                writer.WriteLine("Customer.ID,Customer.CustomerName,Customer.AccountNumber,Customer.CustomerAddress,Customer.CustomerCity,Customer.CustomerState,Customer.CustomerZip,Bills.ID,Bills.BillDate,Bills.BillNumber,Bills.AccountBalance,Bills.DueDate,Bills.BillAmount,Bills.FormatGUID,Customer.DateAdded");
+
+                                // Write data lines
+                                while (reader.Read())
+                                {
+                                    writer.WriteLine($"{reader["ID"]},{reader["CustomerName"]},{reader["AccountNumber"]},{reader["CustomerAddress"]},{reader["CustomerCity"]},{reader["CustomerState"]},{reader["CustomerZip"]},{reader["BillID"]},{reader["BillDate"]},{reader["BillNumber"]},{reader["AccountBalance"]},{reader["DueDate"]},{reader["BillAmount"]},{reader["FormatGUID"]},{reader["DateAdded"]}");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e);
+                return false;
+            }
 
             return true;
         }
