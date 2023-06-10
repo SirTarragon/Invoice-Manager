@@ -1,13 +1,13 @@
-﻿/**
+/**
  * @author: Tyler Pease
  * @github: https://github.com/SirTarragon
  * @date: 06/07/2023
  * */
 
-using IC_Assignment.Models;
+using InvoiceManager.Models;
 using System.Text;
 
-namespace IC_Assignment.Services
+namespace InvoiceManager.Services
 {
     // have to make my own, not sure how to do it properly
     // with inherit

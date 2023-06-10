@@ -1,13 +1,13 @@
-﻿/**
+/**
  * @author: Tyler Pease
  * @github: https://github.com/SirTarragon
  * @date: 06/05/2023
  * */
 
-using IC_Assignment.Helpers;
+using InvoiceManager.Helpers;
 using System.Xml.Serialization;
 
-namespace IC_Assignment.Models
+namespace InvoiceManager.Models
 {
     [XmlRoot(ElementName = "BILL_HEADER")]
     public class BillHeader

@@ -1,10 +1,10 @@
-﻿/**
+/**
  * @author: Tyler Pease
  * @github: https://github.com/SirTarragon
  * @date: 06/07/2023
  * */
 
-namespace IC_Assignment.Models
+namespace InvoiceManager.Models
 {
     public class BillRptData
     {

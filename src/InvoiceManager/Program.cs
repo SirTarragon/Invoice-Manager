@@ -1,10 +1,10 @@
-﻿/**
+/**
  * @author: Tyler Pease
  * @github: https://github.com/SirTarragon
  * @date: 06/05/2023
  * */
 
-using IC_Assignment.Services;
+using InvoiceManager.Services;
 using System.Runtime.Versioning;
 
 [SupportedOSPlatform("windows")] // due to DatabaseManager

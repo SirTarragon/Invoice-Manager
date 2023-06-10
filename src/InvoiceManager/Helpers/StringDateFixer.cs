@@ -1,10 +1,10 @@
-﻿/**
+/**
  * @author: Tyler Pease
  * @github: https://github.com/SirTarragon
  * @date: 06/05/2023
  * */
 
-namespace IC_Assignment.Helpers
+namespace InvoiceManager.Helpers
 {
     // why does the string have to be potentially weird?
     // why does it have to be Jann when there's also Jan?

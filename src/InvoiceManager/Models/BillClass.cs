@@ -1,13 +1,13 @@
-﻿/**
+/**
  * @author: Tyler Pease
  * @github: https://github.com/SirTarragon
  * @date: 06/05/2023
  * */
 
-using IC_Assignment.Helpers;
+using InvoiceManager.Helpers;
 using System.Xml.Serialization;
 
-namespace IC_Assignment.Models
+namespace InvoiceManager.Models
 {
     [XmlRoot(ElementName = "Bill")]
     public class BillClass
@@ -19,7 +19,7 @@ namespace IC_Assignment.Models
         [XmlElement(ElementName = "Bill_Run_Dt")]
         private string billRunDt { get; set; }
         public DateTime BillRunDt
-        { 
+        {
             get
             {
                 return DateTime.ParseExact(StringDateFixer.FixStringDate(billRunDt), "MMM-dd-yyyy", null);

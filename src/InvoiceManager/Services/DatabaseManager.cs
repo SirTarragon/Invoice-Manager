@@ -1,16 +1,16 @@
-﻿/**
+/**
  * @author: Tyler Pease
  * @github: https://github.com/SirTarragon
  * @date: 06/06/2023
  * */
 
-using IC_Assignment.Models;
+using InvoiceManager.Models;
 using System.Configuration;
 using System.Data.OleDb;
 using System.Runtime.Versioning;
 using System.Text;
 
-namespace IC_Assignment.Services
+namespace InvoiceManager.Services
 {
 
     /* Database schema

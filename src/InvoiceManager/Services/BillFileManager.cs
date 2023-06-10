@@ -1,14 +1,14 @@
-﻿/**
+/**
  * @author: Tyler Pease
  * @github: https://github.com/SirTarragon
  * @date: 06/05/2023
  * */
 
-using IC_Assignment.Models;
+using InvoiceManager.Models;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace IC_Assignment.Services
+namespace InvoiceManager.Services
 {
     public class BillFileManager
     {
