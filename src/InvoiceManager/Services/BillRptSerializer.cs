@@ -4,6 +4,7 @@
  * @date: 06/07/2023
  * */
 
+using CustomExtensions;
 using InvoiceManager.Models;
 using System.Text;
 
@@ -106,7 +107,7 @@ namespace InvoiceManager.Services
                             .Append($"|EE~{bill.AddressInfo.City}")
                             .Append($"|FF~{bill.AddressInfo.State}")
                             .Append($"|GG~{bill.AddressInfo.Zip}\n")
-                            .Append($"HH~IH|II~R") // bill invoice
+                            .Append("HH~IH|II~R") // bill invoice
                             .Append($"|JJ~{JJ}")
                             .Append($"|KK~{bill.InvoiceNo}")
                             .Append($"|LL~{billDt}")
@@ -152,97 +153,111 @@ namespace InvoiceManager.Services
                     throw new Exception("File does not meet expected format"); // should be null
 
                 // a lot of assumptions that the file hasn't been manually changed out of format
-                string customer, bill;  // contains data from the given line
-                while ((customer = reader.ReadLine()) != null && (bill = reader.ReadLine()) != null)
+                string readRpt;
+                while ((readRpt = reader.ReadLines(2)) != null)
                 {
                     // likely doesn't help runtime, but, it's easier to understand
                     // what's going on by doing this
-                    string[] customerInfo = customer.Split('|');
-                    string[] billingInfo = bill.Split('|');
+                    string[] billData = readRpt.Split('|');
 
                     // prevents overreading or hopefully possible inaccurate formatting
-                    if (customerInfo.Length < 8 || billingInfo.Length < 12)
-                        break;
+                    if (billData.Length < 19) break;
 
-                    int keyLength = 3;
-
-                    var data = new BillRptData();
-
-                    // customer
-                    data.AccountNumber = customerInfo[1].Substring(keyLength);
-                    data.CustomerName = customerInfo[2].Substring(keyLength);
-                    data.MailAddress1 = customerInfo[3].Substring(keyLength);
-                    data.MailAddress2 = customerInfo[4].Substring(keyLength);
-                    data.City = customerInfo[5].Substring(keyLength);
-                    data.State = customerInfo[6].Substring(keyLength);
-                    data.Zip = customerInfo[7].Substring(keyLength);
-
-                    // billing
-                    data.FormatGUID = billingInfo[2].Substring(keyLength);
-                    data.InvoiceNumber = billingInfo[3].Substring(keyLength);
-
-                    // time to parse date and make sure data is expected
-                    // if not, throw exception with custom message to help with identifying issue
-                    try
-                    {
-                        data.BillDt = DateTime.ParseExact(
-                            billingInfo[4].Substring(keyLength), "MM/dd/yyyy", null);
-                    }
-                    catch
-                    {
-                        throw new Exception("Check all LL keys; invalid formatting. Expecting 'MM/dd/yyyy' format.");
-                    }
-                    try
-                    {
-                        data.DueDt = DateTime.ParseExact(
-                            billingInfo[5].Substring(keyLength), "MM/dd/yyyy", null);
-                    }
-                    catch
-                    {
-                        throw new Exception("Check all MM keys; invalid formatting. Expecting 'MM/dd/yyyy' format.");
-                    }
-
-                    data.BillAmount = billingInfo[6].Substring(keyLength);
-
-                    try
-                    {
-                        data.NotifOne = DateTime.ParseExact(
-                            billingInfo[7].Substring(keyLength), "MM/dd/yyyy", null);
-                    }
-                    catch
-                    {
-                        throw new Exception("Check all OO keys; invalid formatting. Expecting 'MM/dd/yyyy' format.");
-                    }
-                    try
-                    {
-                        data.NotifTwo = DateTime.ParseExact(
-                            billingInfo[8].Substring(keyLength), "MM/dd/yyyy", null);
-                    }
-                    catch
-                    {
-                        throw new Exception("Check all PP keys; invalid formatting. Expecting 'MM/dd/yyyy' format.");
-                    }
-
-                    data.BalanceDue = billingInfo[9].Substring(keyLength);
-
-                    try
-                    {
-                        data.DateAdded = DateTime.ParseExact(
-                            billingInfo[10].Substring(keyLength), "MM/dd/yyyy", null);
-                    }
-                    catch
-                    {
-                        throw new Exception("Check all RR keys; invalid formatting. Expecting 'MM/dd/yyyy' format.");
-                    }
-
-                    data.ServiceAddress = billingInfo[11].Substring(keyLength);
-
-                    output.Add(data);
-
+                    output.Add(ExtractData(billData));
                 }
             }
 
             return output;
+        }
+
+        private static BillRptData ExtractData(string[] arrPairs, int keyLength = 3)
+        {
+            var data = new BillRptData();
+
+            for (int i = 0; i < arrPairs.Length; i++)
+            {
+                // check for valid key and assign data based on it
+                string key = $"{arrPairs[i][0]}{arrPairs[i][1]}{arrPairs[i][2]}";
+                switch (key)
+                {
+                    case "AA~":
+                        break;
+                    case "BB~":
+                        data.AccountNumber = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "VV~":
+                        data.CustomerName = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "CC~":
+                        data.MailAddress1 = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "DD~":
+                        data.MailAddress2 = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "EE~":
+                        data.City = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "FF~":
+                        data.State = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "GG~":
+                        data.Zip = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "HH~":
+                        break;
+                    case "II~":
+                        break;
+                    case "JJ~":
+                        data.FormatGUID = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "KK~":
+                        data.InvoiceNumber = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "LL~":
+                        try
+                        { data.BillDt = DateTime.ParseExact(arrPairs[i].Substring(keyLength), "MM/dd/yyyy", null); }
+                        catch
+                        { throw new Exception("Check all LL keys; invalid formatting. Expecting 'MM/dd/yyyy' format."); }
+                        break;
+                    case "MM~":
+                        try
+                        { data.DueDt = DateTime.ParseExact(arrPairs[i].Substring(keyLength), "MM/dd/yyyy", null); }
+                        catch
+                        { throw new Exception("Check all MM keys; invalid formatting. Expecting 'MM/dd/yyyy' format."); }
+                        break;
+                    case "NN~":
+                        data.BillAmount = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "OO~":
+                        try
+                        { data.NotifOne = DateTime.ParseExact(arrPairs[i].Substring(keyLength), "MM/dd/yyyy", null); }
+                        catch
+                        { throw new Exception("Check all OO keys; invalid formatting. Expecting 'MM/dd/yyyy' format."); }
+                        break;
+                    case "PP~":
+                        try
+                        { data.NotifTwo = DateTime.ParseExact(arrPairs[i].Substring(keyLength), "MM/dd/yyyy", null); }
+                        catch
+                        { throw new Exception("Check all PP keys; invalid formatting. Expecting 'MM/dd/yyyy' format."); }
+                        break;
+                    case "QQ~":
+                        data.BalanceDue = arrPairs[i].Substring(keyLength);
+                        break;
+                    case "RR~":
+                        try
+                        { data.DateAdded = DateTime.ParseExact(arrPairs[i].Substring(keyLength), "MM/dd/yyyy", null); }
+                        catch
+                        { throw new Exception("Check all RR keys; invalid formatting. Expecting 'MM/dd/yyyy' format."); }
+                        break;
+                    case "SS~":
+                        data.ServiceAddress = arrPairs[i].Substring(keyLength);
+                        break;
+                    default:
+                        throw new Exception($"Invalid Key: {key}");
+                }
+            }
+
+            return data;
         }
     }
 }
