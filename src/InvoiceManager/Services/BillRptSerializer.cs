@@ -163,7 +163,15 @@ namespace InvoiceManager.Services
                     // prevents overreading or hopefully possible inaccurate formatting
                     if (billData.Length < 19) break;
 
-                    output.Add(ExtractData(billData));
+                    try
+                    {
+                        var parsedData = ExtractData(billData);
+                        output.Add(parsedData);
+                    }
+                    catch
+                    {
+                        throw;
+                    }
                 }
             }
 
